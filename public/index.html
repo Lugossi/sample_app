@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sample App</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+      color: #1a1a1a;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    input {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      flex: 1;
+      min-width: 160px;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      background: #2563eb;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.del {
+      background: #ef4444;
+      padding: 4px 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+      font-size: 14px;
+    }
+    th {
+      background: #f8fafc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Sample App</h1>
+  <form id="entry-form">
+    <input id="name" placeholder="Name" required />
+    <input id="email" type="email" placeholder="Email" required />
+    <button type="submit">Add</button>
+  </form>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    const rows = document.getElementById("rows");
+    const form = document.getElementById("entry-form");
+
+    async function load() {
+      const res = await fetch("/api/entries");
+      const data = await res.json();
+      rows.innerHTML = "";
+      for (const e of data) {
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + e.id + "</td>" +
+          "<td>" + escapeHtml(e.name) + "</td>" +
+          "<td>" + escapeHtml(e.email) + "</td>" +
+          "<td>" + new Date(e.created_at).toLocaleString() + "</td>" +
+          '<td><button class="del" data-id="' + e.id + '">Delete</button></td>';
+        rows.appendChild(tr);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    form.addEventListener("submit", async function (ev) {
+      ev.preventDefault();
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      if (!name || !email) return;
+      await fetch("/api/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      });
+      form.reset();
+      load();
+    });
+
+    rows.addEventListener("click", async function (ev) {
+      if (!ev.target.classList.contains("del")) return;
+      const id = ev.target.getAttribute("data-id");
+      await fetch("/api/entries/" + id, { method: "DELETE" });
+      load();
+    });
+
+    load();
+  </script>
+</body>
+</html>
